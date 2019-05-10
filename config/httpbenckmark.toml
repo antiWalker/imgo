@@ -1,0 +1,15 @@
+[base]
+duration = 10   #压测时间，单位s
+threadnum = 50  #开启协程数量，越高给的压力越大
+qps = 200       #压测期望qps，实际压完可能比这个高，仅起调解作用
+url = "http://172.18.12.245:8080/sendmsg"   #请求接口
+method = "POST" #http请求方法
+contenttype = "application/x-www-form-urlencoded"   #http Content-Type
+timeout = 5     #请求超时，超时应该会统计到失败里面
+
+#请求参数数组
+[[reqbodys]]
+body = "touid=46667553&content=\"aaaa\""
+
+[[reqbodys]]
+body = "touid=75609097&content=\"aaaa\""

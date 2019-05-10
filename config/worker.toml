@@ -1,0 +1,20 @@
+[base]
+pidfile = "/tmp/worker.pid"
+logfile = "../logs/worker.log"
+serverId = 1
+PprofBind = "0.0.0.0:7777"
+RedisAddr = "localhost:6379"
+redisPw = "123456"
+RedisDefaultDB = 0
+RedisPoolSize = 200
+RedisKeyTtl = 7200
+
+[websocket]
+bind = "0.0.0.0:8989"
+beatinginterval = 3000
+retransinterval = 18
+
+[[rpcPushAddrs]]
+key = 1
+addr = "tcp@0.0.0.0:8848"
+inner = "127.0.0.1:8848"

@@ -1,0 +1,16 @@
+[base]
+pidfile = "/tmp/job.pid"
+hostAddr = "0.0.0.0:8080"
+redisAddr = "172.18.12.226:6379"
+redisPw = "123456"
+usePool = 0
+poolSize = 100
+
+
+[[workerAddrs]]
+key = 1
+addr = "tcp@172.18.12.226:8848"
+
+[[workerAddrs]]
+key = 2
+addr = "tcp@0.0.0.0:8849"

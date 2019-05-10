@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="https://wpstatic.mafengwo.net/msales/salesstatic/js/vue/2.5.17/vue.js"></script>
+    <script src="https://wpstatic.mafengwo.net/msales/salesstatic/js/babel-polyfill/6.26.0/polyfill.min.js"></script>
+</head>
+<body>
+<div class="warp" id="app">
+    webSocket测试Demo
+    <div>
+        <p>接收到的服务端数据</p>
+        <ul>
+            <li v-for="(item, index) in list" :key="index">{{item}}</li>
+        </ul>
+    </div>
+    用户Uid<input v-model="uid">
+    <textarea placeholder="请输入内容" v-model="inputData"></textarea>
+    <div class="btn" @click="sendMessage">提交</div>
+    <div class="btn btn-close" @click="closeMessage">关闭连接</div>
+</div>
+<script type="text/javascript">
+    var vm = new Vue({
+        el: "#app",
+        data() {
+            return {
+                inputData: '', // 输入值
+                socketCase: null, // socket实例
+                list: [], // 数据列表
+                uid: '', // uid
+                url: 'ws://172.18.32.78:8989/ws', // 请求接口  wss://替代ws://
+                subProtocol: [], // 子协议, 多个子协议用逗号分开
+                isClose: false,
+                retry: 0,
+                singleTime: 0,
+            };
+        },
+        methods: {
+            sendMessage() {
+                this.socketCase.send(this.inputData);
+                this.inputData = '';
+            },
+            closeMessage() {
+                this.socketCase.close();
+                alert('已关闭连接');
+            },
+            init() {
+                const vm = this;
+                this.socketCase = new WebSocket(`${this.url}`, this.subProtocol);
+
+                // 监听错误
+                this.socketCase.onerror = function (error) {
+                    vm.singleTime++;
+                    console.log(`Error:   ${error}`);
+                };
+
+                // 已连接
+                this.socketCase.onopen = function () {
+                    vm.isClose = false;
+                    console.log(`Connected to: ${this.url}`);
+                };
+
+                // 关闭连接
+                this.socketCase.onclose = function () {
+                    vm.isClose = true;
+                    vm.singleTime++;
+                    console.log(`Disconnected from 地址是${this.url}`);
+                };
+
+                // 连接中获取值
+                this.socketCase.onmessage = function (event) {
+                    console.log(event, '接收的数据');
+                    vm.list.push(event.data);
+                };
+            }
+        },
+        mounted() {
+            this.init();
+        },
+        watch: {
+            isClose(newV, oldV) {
+                if (this.singleTime >= 3) {
+                    this.closeMessage();
+                    return;
+                }
+                if (!newV) {
+                    return;
+                }
+                console.log('心跳测试，重新连接！');
+                this.init();
+            },
+        },
+    });
+</script>
+
+<style>
+    .warp {
+        width: 600px;
+        margin: 40px auto;
+        font-size: 28px;
+    }
+    textarea {
+        display: block;
+        width: 600px;
+        min-height: 150px;
+        padding-top: 20px;
+        margin-top: 20px;
+        text-indent: 10px;
+        border: 1px solid #999;
+    }
+    .btn {
+        display: inline-block;
+        height: 40px;
+        margin-top: 20px;
+        color: #fff;
+        background-color: #409eff;
+        border-color: #409eff;
+        line-height: 40px;
+        cursor: pointer;
+        text-align: center;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 4px;
+    }
+    .btn-close {
+        background: #ea6f5a;
+    }
+    ul {
+        width: 600px;
+        min-height: 180px;
+        margin-top: 20px;
+        padding: 0;
+        font-size: 24px;
+        color: #409eff;
+        border: 1px solid #777777;
+    }
+    li {
+        padding: 8px;
+        border-bottom: 1px dashed royalblue;
+    }
+
+    p {
+        margin-top: 20px;
+        font-size: 20px;
+        color: #009a61;
+    }
+    input {
+        margin:10px 10px 10px 20px;
+        height: 24px;
+        transform: translateY(-6px);
+    }
+</style>
+</body>
+</html>
