@@ -1,9 +1,9 @@
 [base]
 pidfile = "/tmp/job.pid"
 hostAddr = "0.0.0.0:8080"
-redisAddr = "172.18.12.226:6379"
+redisAddr = "127.0.0.1:6379"
 redisPw = "123456"
-usePool = 0
+usePool = 1
 poolSize = 100
 
 
@@ -14,3 +14,8 @@ addr = "tcp@172.18.12.226:8848"
 [[workerAddrs]]
 key = 2
 addr = "tcp@0.0.0.0:8849"
+
+[etcd]
+host = "127.0.0.1:2379"
+basePath = "/imgo_rpcx"
+ServerPathDispatcher = "PushRpc"

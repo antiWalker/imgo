@@ -4,6 +4,9 @@ import (
 	"context"
 	"github.com/smallnest/rpcx/client"
 	"imgo/libs"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type WorkerConf struct {
@@ -14,27 +17,24 @@ type WorkerConf struct {
 var (
 	RpcClientList map[int16]client.XClient
 )
-
-func InitRpcConnect(WorkerConf []WorkerConf) (err error) {
-	LogicAddrs := make([]*client.KVPair, len(WorkerConf))
-	RpcClientList = make(map[int16]client.XClient)
-
-	for i, bind := range WorkerConf {
-		// log.Infof("bind key %d", bind.Key)
-		b := new(client.KVPair)
-		b.Key = bind.Addr
-		// 需要转int 类型
-		LogicAddrs[i] = b
-		d := client.NewPeer2PeerDiscovery(bind.Addr, "")
-
-		RpcClientList[bind.Key] = client.NewXClient(libs.RpcPushServerPath, client.Failtry, client.RandomSelect, d, client.DefaultOption)
-
-		//log.Infof("RpcClientList addr %s, v %v ,key is %s", bind.Addr, RpcClientList[bind.Key], bind.Key)
-		libs.ZapLogger.Info("RpcClientList addr " + bind.Addr + " key is  " + string(bind.Key))
+func InitRpcConnect() (err error) {
+	d := client.NewEtcdDiscovery(Conf.EtcdInfo.BasePath, Conf.EtcdInfo.ServerPathDispatcher, []string{Conf.EtcdInfo.Host}, nil)
+	RpcClientList = make(map[int16]client.XClient, len(d.GetServices()))
+	option := client.DefaultOption
+	option.GenBreaker = func() client.Breaker { return client.NewConsecCircuitBreaker(5, 30*time.Second) }
+	option.Retries = 10
+	for _, rpcConf := range d.GetServices() {
+		rpcConf.Value = strings.Replace(rpcConf.Value, "=&tps=0", "", 1)
+		serverId, error := strconv.ParseInt(rpcConf.Value, 10, 8)
+		if error != nil {
+			libs.ZapLogger.Error("error: " + error.Error())
+		}
+		d := client.NewPeer2PeerDiscovery(rpcConf.Key, "")
+		RpcClientList[int16(serverId)] = client.NewXClient(Conf.EtcdInfo.ServerPathDispatcher, client.Failtry, client.RandomSelect, d, option)
 	}
-
-	return nil
+	return
 }
+
 
 func PushSingleToWorker(RpcClient client.XClient, uuid string, msg string) {
 	args := &libs.PushMsgArg{

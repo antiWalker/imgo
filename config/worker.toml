@@ -18,3 +18,9 @@ retransinterval = 18
 key = 1
 addr = "tcp@0.0.0.0:8848"
 inner = "127.0.0.1:8848"
+
+[etcd]
+host = "127.0.0.1:2379"
+basePath = "/imgo_rpcx"
+serverPathWorker = "PushRpc"
+ServerId = "1"

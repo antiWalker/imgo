@@ -18,6 +18,13 @@ func init() {
 type Config struct {
 	Base       BaseConf     `mapstructure:"base"`
 	WorkerConf []WorkerConf `mapstructure:"workerAddrs"`
+	EtcdInfo    Etcd        `mapstructure:"etcd"`
+}
+
+type Etcd struct {
+	Host            string `mapstructure:"host"`
+	BasePath        string `mapstructure:"basePath"`
+	ServerPathDispatcher string `mapstructure:"serverPathDispatcher"`
 }
 
 // 基础的配置信息

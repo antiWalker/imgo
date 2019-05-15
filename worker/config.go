@@ -22,6 +22,14 @@ type Config struct {
 	Base        BaseConf       `mapstructure:"base"`
 	Websocket   WebsocketConf  `mapstructure:"websocket"`
 	RpcPushAdds []RpcPushAddrs `mapstructure:"rpcPushAddrs"`
+	EtcdInfo    Etcd           `mapstructure:"etcd"`
+}
+
+type Etcd struct {
+	Host            string `mapstructure:"host"`
+	BasePath        string `mapstructure:"basePath"`
+	ServerId        string `mapstructure:"ServerId"`
+	ServerPathWorker string `mapstructure:"serverPathWorker"`
 }
 
 type RpcPushAddrs struct {

@@ -48,7 +48,7 @@ func main() {
 		libs.ZapLogger.Panic("InitRedis() failed", zap.String("err", err.Error()))
 	}
 	// 初始化logic对应的 多台 logic server
-	if err := InitRpcConnect(Conf.WorkerConf); err != nil {
+	if err := InitRpcConnect(); err != nil {
 		libs.ZapLogger.Panic("InitRpcConnect() failed", zap.String("err", err.Error()))
 	}
 	//server deal data
@@ -83,7 +83,7 @@ func handleRequest(payload interface{}) {
 			libs.ZapLogger.Error("len(uuid) == 0 || len(v) == 0")
 			continue
 		}
-		serverid, err := strconv.Atoi(v)
+		serverid, err := strconv.Atoi(v[:1])
 		if err != nil {
 			libs.ZapLogger.Error("strconv.Atoi(v) err")
 			continue

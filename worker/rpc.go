@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/rcrowley/go-metrics"
 	"github.com/smallnest/rpcx/server"
+	"github.com/smallnest/rpcx/serverplugin"
 	"imgo/libs"
+	"time"
 )
 
 type PushRpc int
@@ -23,8 +26,28 @@ func InitPushRpc(addrs []RpcPushAddrs) (err error) {
 
 func createServer(network string, addr string) {
 	s := server.NewServer()
-	s.RegisterName("PushRpc", new(PushRpc), "")
+	addRegistryPlugin(s, network, addr)
+
+	//s.RegisterName("Arith", new(Arith2), "2")
+	s.RegisterName(Conf.EtcdInfo.ServerPathWorker, new(PushRpc), Conf.EtcdInfo.ServerId)
+	//s.RegisterName("PushRpc", new(PushRpc), "")
 	s.Serve(network, addr)
+}
+
+func addRegistryPlugin(s *server.Server, network string, addr string) {
+
+	r := &serverplugin.EtcdRegisterPlugin{
+		ServiceAddress: network + "@" + addr,
+		EtcdServers:    []string{Conf.EtcdInfo.Host},
+		BasePath:       Conf.EtcdInfo.BasePath,
+		Metrics:        metrics.NewRegistry(),
+		UpdateInterval: time.Minute,
+	}
+	err := r.Start()
+	if err != nil {
+		libs.ZapLogger.Error("Etcd has an error")
+	}
+	s.Plugins.Add(r)
 }
 
 func (rpc *PushRpc) PushMsg(ctx context.Context, args *libs.PushMsgArg, SuccessReply *libs.RpcSuccessReply) (err error) {
