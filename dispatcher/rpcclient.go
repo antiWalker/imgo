@@ -18,7 +18,7 @@ var (
 	RpcClientList map[int16]client.XClient
 )
 func InitRpcConnect() (err error) {
-	d := client.NewEtcdDiscovery(Conf.EtcdInfo.BasePath, Conf.EtcdInfo.ServerPathDispatcher, []string{Conf.EtcdInfo.Host}, nil)
+	d := client.NewEtcdDiscovery(Conf.EtcdInfo.BasePath, Conf.EtcdInfo.ServerPathDispatcher, Conf.EtcdInfo.Host, nil)
 	RpcClientList = make(map[int16]client.XClient, len(d.GetServices()))
 	option := client.DefaultOption
 	option.GenBreaker = func() client.Breaker { return client.NewConsecCircuitBreaker(5, 30*time.Second) }

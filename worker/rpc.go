@@ -29,7 +29,7 @@ func createServer(network string, addr string) {
 	addRegistryPlugin(s, network, addr)
 
 	//s.RegisterName("Arith", new(Arith2), "2")
-	s.RegisterName(Conf.EtcdInfo.ServerPathWorker, new(PushRpc), Conf.EtcdInfo.ServerId)
+	s.RegisterName(Conf.EtcdInfo.ServerPathWorker, new(PushRpc), Conf.Base.ServerId)
 	//s.RegisterName("PushRpc", new(PushRpc), "")
 	s.Serve(network, addr)
 }
@@ -38,7 +38,7 @@ func addRegistryPlugin(s *server.Server, network string, addr string) {
 
 	r := &serverplugin.EtcdRegisterPlugin{
 		ServiceAddress: network + "@" + addr,
-		EtcdServers:    []string{Conf.EtcdInfo.Host},
+		EtcdServers:    Conf.EtcdInfo.Host,
 		BasePath:       Conf.EtcdInfo.BasePath,
 		Metrics:        metrics.NewRegistry(),
 		UpdateInterval: time.Minute,

@@ -12,6 +12,15 @@ import (
 	"time"
 )
 
+const (
+	ROLE_USER     int = 1
+	ROLE_BUSINESS int = 2
+
+	CHANNEL_WEB     int = 0
+	CHANNEL_ANDROID int = 1
+	CHANNEL_IOS     int = 2
+)
+
 var (
 	GoPool *ants.PoolWithFunc
 )
@@ -19,8 +28,31 @@ var (
 type Request struct {
 	ToUid       string
 	Content     string
+	ToRole      string
 	Connections map[string]string
 	Result      chan string
+}
+
+type httpReturn struct {
+	Errno int         `json:"errno"`
+	Error string      `json:"error"`
+	Data  interface{} `json:"data"`
+}
+
+type userStatus struct {
+	AppB int `json:"app_b"`
+	AppC int `json:"app_c"`
+	WebB int `json:"web_b"`
+	WebC int `json:"web_c"`
+	PcB  int `json:"pc_b"`
+	PcC  int `json:"pc_c"`
+}
+
+type msgHandled struct {
+	Handled int `json:"handled"`
+	APP     int `json:"app"`
+	WEB     int `json:"web"`
+	PC      int `json:"pc"`
 }
 
 func main() {
@@ -36,7 +68,7 @@ func main() {
 	libs.ZapLogger.Sugar().Infof("conf :%v", Conf)
 
 	if Conf.Base.UsePool == 1 {
-		GoPool, _ = ants.NewPoolWithFunc(Conf.Base.PoolSize, handleRequest)
+		GoPool, _ = ants.NewPoolWithFunc(Conf.Base.PoolSize, PushMsg)
 		defer GoPool.Release()
 	}
 
@@ -62,16 +94,15 @@ func main() {
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
-	router.POST("/sendmsg", func2)
+	router.POST("/sendmsg", handleSendmsg)
+	router.POST("/checkstatus", handleCheckstatus)
 	s.ListenAndServe()
 
 	//下面是个通过rpcx把数据打到logic层的例子，我在logic层起了两个rpc-server。ip相同，端口不同。
 	//router层拿到php传过来的uid后，查询这个uid在哪个logic上。分别使用不同的rpcClient来发送数据。
-
-	//select {}
 }
 
-func handleRequest(payload interface{}) {
+func PushMsg(payload interface{}) {
 	request, ok := payload.(*Request)
 	if !ok {
 		libs.ZapLogger.Error("payload.(*Request) param not exist")
@@ -98,39 +129,53 @@ func handleRequest(payload interface{}) {
 	}
 }
 
-func func2(c *gin.Context) {
+func handleSendmsg(c *gin.Context) {
 	// 回复一个200OK,在client的http-get的resp的body中获取数据
 	touid := c.PostForm("touid")
 	content := c.PostForm("content")
+	torole := c.PostForm("torole")
+	var ret httpReturn
+	var handled msgHandled
+	ret.Data = handled
 	if len(touid) == 0 {
 		errstr := "Param len(touid) == 0"
 		libs.ZapLogger.Error(errstr)
-		c.JSON(http.StatusOK, gin.H{
-			"handled":  0,
-			"errorstr": errstr,
-		})
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
 		return
 	}
 	if len(content) == 0 {
 		errstr := "Param len(content) == 0"
 		libs.ZapLogger.Error(errstr)
-		c.JSON(http.StatusOK, gin.H{
-			"handled":  0,
-			"errorstr": errstr,
-		})
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
 		return
 	}
-	connections, _ := GetUserPlace(touid)
-	if len(connections) == 0 {
-		errstr := "touid: " + touid + " no websocket connection"
+	if len(torole) == 0 {
+		errstr := "Param len(torole) == 0"
 		libs.ZapLogger.Error(errstr)
-		c.JSON(http.StatusOK, gin.H{
-			"handled":  0,
-			"errorstr": errstr,
-		})
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
 		return
 	}
-	request := &Request{ToUid: touid, Content: content, Connections: connections}
+	connections, err := GetUserPlace(touid)
+	if err != nil && Conf.Base.NoDBStrategy == 0 {
+		errstr := "redis connection break"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = REDIS_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+	if err == nil && len(connections) == 0 {
+		httpRet(c, ret)
+		return
+	}
+
+	request := &Request{ToUid: touid, Content: content, ToRole: torole, Connections: connections}
 	if Conf.Base.UsePool == 1 && GoPool != nil {
 		if err := GoPool.Invoke(request); err != nil {
 			libs.ZapLogger.Error(err.Error())
@@ -141,13 +186,68 @@ func func2(c *gin.Context) {
 			return
 		}
 	} else {
-		handleRequest(request)
+		PushMsg(request)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"handled":  1,
 		"errorstr": "",
 	})
+}
+
+func handleCheckstatus(c *gin.Context) {
+	uid := c.PostForm("uid")
+	var status userStatus
+	var ret httpReturn
+	ret.Data = status
+	if len(uid) == 0 {
+		errstr := "Param len(uid) == 0"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+
+	connections, err := GetUserPlace(uid)
+	if err != nil {
+		errstr := "redis connection break"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = REDIS_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+
+	for _, v := range connections {
+		lenv := len(v)
+		if lenv < 3 {
+			libs.ZapLogger.Error("lenv < 3 v=" + v)
+			continue
+		}
+		role, _ := strconv.Atoi(v[lenv-1 : lenv])
+		channel, _ := strconv.Atoi(v[lenv-2 : lenv-1])
+		if role == ROLE_USER {
+			if channel == CHANNEL_WEB {
+				status.WebC = 1
+			} else {
+				status.AppC = 1
+			}
+		} else {
+			if channel == CHANNEL_WEB {
+				status.WebB = 1
+			} else {
+				status.AppB = 1
+			}
+		}
+	}
+
+	ret.Data = status
+	httpRet(c, ret)
+}
+
+func httpRet(c *gin.Context, ret httpReturn) {
+	c.JSON(http.StatusOK, ret)
 }
 
 //testEventUpload 测试日志上报

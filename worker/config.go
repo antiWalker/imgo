@@ -26,7 +26,7 @@ type Config struct {
 }
 
 type Etcd struct {
-	Host            string `mapstructure:"host"`
+	Host            []string `mapstructure:"host"`
 	BasePath        string `mapstructure:"basePath"`
 	ServerId        string `mapstructure:"ServerId"`
 	ServerPathWorker string `mapstructure:"serverPathWorker"`
@@ -38,14 +38,14 @@ type RpcPushAddrs struct {
 }
 type WebsocketConf struct {
 	Bind string `mapstructure:"bind"` //
-	BeatingInterval int `mapstructure:"beatinginterval"` //
-	RetransInterval int `mapstructure:"retransinterval"` //
+	BeatingInterval int `mapstructure:"beatingInterval"` //
+	RetransInterval int `mapstructure:"retransInterval"` //
 }
 
 // 基础的配置信息
 type BaseConf struct {
-	Pidfile         string `mapstructure:"pidfile"`
-	ServerId        int   `mapstructure:"serverId"`
+	Pidfile         string   `mapstructure:"pidfile"`
+	ServerId        string   `mapstructure:"serverId"`
 	MaxProc         int
 	PprofBind       []string `mapstructure:"pprofBind"` // 性能监控的域名端口
 	Logfile         string   `mapstructure:"logfile"`   // log 文件

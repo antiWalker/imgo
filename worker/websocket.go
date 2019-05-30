@@ -65,6 +65,15 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 			libs.ZapLogger.Info("have no from,so quit now")
 			return
 		}
+		//role just
+		roleInfo, err := r.Cookie("r")
+		var role string
+		if err == nil && roleInfo.Value !="" {
+			role = roleInfo.Value
+		} else {
+			libs.ZapLogger.Info("have no role,so quit now")
+			return
+		}
 		// 写入配置
 		cl = NewClient(server.BroadcastSize,server.SignalSize)
 		cl.conn = conn
@@ -76,7 +85,7 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 		store(cl.Uuid, cl)
 		libs.ZapLogger.Info("connNum is "+ strconv.Itoa(connNumber))
 		//hash insert to redis
-		SaveUserInfo(cl.Uid, cl.Uuid,platform)
+		SaveUserInfo(cl.Uid, cl.Uuid,platform,role)
 	} else {
 		libs.ZapLogger.Info("have no mfw_uid,so quit now")
 		return

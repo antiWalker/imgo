@@ -9,7 +9,7 @@ import (
 	"github.com/json-iterator/go"
 	"io/ioutil"
 	"net/http"
-	"net/url"
+	neturl "net/url"
 	"strconv"
 	"strings"
 )
@@ -90,7 +90,7 @@ func EventUpload(eventBasic EventBasic, eventAttr map[string]string) bool {
 		},
 	}
 	client := &http.Client{Transport: tr}
-	postdata := url.Values{}
+	postdata := neturl.Values{}
 	postdata.Set("app_code", eventBasic.AppCode)
 	postdata.Set("app_ver", eventBasic.AppVer)
 	postdata.Set("jsondata", string(alldata))

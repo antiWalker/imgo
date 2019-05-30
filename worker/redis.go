@@ -2,37 +2,68 @@ package main
 
 import (
 	"github.com/go-redis/redis"
+	"github.com/json-iterator/go"
 	"imgo/libs"
 	"strconv"
 	"time"
 )
 
+
+type redisClusterConf struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}
+
 var (
-	RedisCli *redis.Client
+	RedisCli  *redis.Client
+	resisConf redisClusterConf
 )
 
+func getRedisConf() (string, error) {
+	valueRedis, err := libs.GetRedisConf("lionet", 6380)
+	if err != nil {
+		libs.ZapLogger.Error(err.Error())
+	}
+	return valueRedis, err
+}
+
 func InitRedis() (err error) {
+	redisconf, err := getRedisConf()
+	if err != nil {
+		libs.ZapLogger.Error(err.Error())
+		return err
+	}
+
+	var jsoniterator = jsoniter.ConfigCompatibleWithStandardLibrary
+	err = jsoniterator.Unmarshal([]byte(redisconf), &resisConf)
+	if err != nil {
+		libs.ZapLogger.Error(err.Error())
+		return err
+	}
+
+	port := strconv.Itoa(resisConf.Port)
+	redisAddr := resisConf.Host + ":" + port
 	RedisCli = redis.NewClient(&redis.Options{
-		Addr:     Conf.Base.RedisAddr,
-		Password: Conf.Base.RedisPw,        // no password set
+		Addr:     redisAddr,
+		Password: "",        // no password set
 		DB:       Conf.Base.RedisDefaultDB, // use default DB
 		PoolSize: Conf.Base.RedisPoolSize,
 	})
 	if pong, err := RedisCli.Ping().Result(); err != nil {
-		libs.ZapLogger.Error("RedisCli Ping Result pong:"+string(pong)+" err:"+err.Error())
+		libs.ZapLogger.Error("RedisCli Ping Result pong:" + string(pong)+" err:" + err.Error())
 	}
 
 	return
 }
 
 //将用户和服务器IP的对应关系保存到redis
-func SaveUserInfo(key string, uuid string,platform string) (err error) {
+func SaveUserInfo(key string, uuid string,platform string,role string) (err error) {
 	if RedisCli == nil {
 		libs.ZapLogger.Error("RedisCli == nil")
 		return err
 	}
 	//RedisCli.HSet(libs.REDIS_PREFIX+key, uuid, Conf.Base.RpcInnerIp+":"+Conf.Base.RpcInnerPort)
-	saveValue := strconv.Itoa(Conf.Base.ServerId) + platform
+	saveValue := Conf.Base.ServerId + platform + role
 	RedisCli.HSet(libs.REDIS_PREFIX+key, uuid, saveValue)
 	RedisCli.Expire(libs.REDIS_PREFIX+key, time.Second * time.Duration(Conf.Base.RedisKeyTtl))//2个小时
 	return

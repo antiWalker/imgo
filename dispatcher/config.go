@@ -18,12 +18,12 @@ func init() {
 type Config struct {
 	Base       BaseConf     `mapstructure:"base"`
 	WorkerConf []WorkerConf `mapstructure:"workerAddrs"`
-	EtcdInfo    Etcd        `mapstructure:"etcd"`
+	EtcdInfo   Etcd         `mapstructure:"etcd"`
 }
 
 type Etcd struct {
-	Host            string `mapstructure:"host"`
-	BasePath        string `mapstructure:"basePath"`
+	Host                 []string `mapstructure:"host"`
+	BasePath             string `mapstructure:"basePath"`
 	ServerPathDispatcher string `mapstructure:"serverPathDispatcher"`
 }
 
@@ -37,8 +37,9 @@ type BaseConf struct {
 	RedisPw        string   `mapstructure:"redisPw"`
 	RedisDefaultDB int      `mapstructure:"redisDefaultDB"`
 	IsDebug        bool
-	UsePool        int      `mapstructure:"usePool"`  //1:使用协程池处理http请求
-	PoolSize       int      `mapstructure:"poolSize"` //协程池中协程数量
+	UsePool        int `mapstructure:"usePool"`      //是否使用协程池处理http请求，1为使用，0为不使用
+	PoolSize       int `mapstructure:"poolSize"`     //协程池中协程数量
+	NoDBStrategy   int `mapstructure:"noDBStrategy"` //数据库连接断开时的策略，0为直接返回错误，1为轮询worker保证送达
 }
 
 func InitConfig() (err error) {

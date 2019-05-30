@@ -12,6 +12,7 @@ require (
 	github.com/gin-gonic/gin v1.3.0
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 // indirect
+	github.com/json-iterator/go v1.1.6
 	github.com/panjf2000/ants v4.0.2+incompatible
 	github.com/sirupsen/logrus v1.4.1 // indirect
 	github.com/smallnest/rpcx v0.0.0-20190314105900-7f0308df0c1f

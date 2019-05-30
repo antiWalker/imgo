@@ -1,7 +1,7 @@
 [base]
 pidfile = "/tmp/worker.pid"
 logfile = "../logs/worker.log"
-serverId = 1
+serverId = "1"
 PprofBind = "0.0.0.0:7777"
 RedisAddr = "localhost:6379"
 redisPw = "123456"
@@ -11,8 +11,8 @@ RedisKeyTtl = 7200
 
 [websocket]
 bind = "0.0.0.0:8989"
-beatinginterval = 3000
-retransinterval = 18
+beatingInterval = 60
+retransInterval = 18
 
 [[rpcPushAddrs]]
 key = 1
@@ -20,7 +20,10 @@ addr = "tcp@0.0.0.0:8848"
 inner = "127.0.0.1:8848"
 
 [etcd]
-host = "127.0.0.1:2379"
+host = [
+       	"172.18.12.226:2379",
+       	"172.18.12.229:2379",
+       	"172.18.12.254:2379"
+       ]
 basePath = "/imgo_rpcx"
 serverPathWorker = "PushRpc"
-ServerId = "1"
