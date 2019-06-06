@@ -2,9 +2,7 @@ package main
 
 import (
 	"github.com/go-redis/redis"
-	"github.com/json-iterator/go"
 	"imgo/libs"
-	"strconv"
 	"time"
 )
 
@@ -16,41 +14,17 @@ type redisClusterConf struct {
 
 var (
 	RedisCli  *redis.Client
-	resisConf redisClusterConf
 )
 
-func getRedisConf() (string, error) {
-	valueRedis, err := libs.GetRedisConf("lionet", 6380)
-	if err != nil {
-		libs.ZapLogger.Error(err.Error())
-	}
-	return valueRedis, err
-}
-
 func InitRedis() (err error) {
-	redisconf, err := getRedisConf()
-	if err != nil {
-		libs.ZapLogger.Error(err.Error())
-		return err
-	}
-
-	var jsoniterator = jsoniter.ConfigCompatibleWithStandardLibrary
-	err = jsoniterator.Unmarshal([]byte(redisconf), &resisConf)
-	if err != nil {
-		libs.ZapLogger.Error(err.Error())
-		return err
-	}
-
-	port := strconv.Itoa(resisConf.Port)
-	redisAddr := resisConf.Host + ":" + port
 	RedisCli = redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: "",        // no password set
+		Addr:     Conf.Base.RedisAddr,
+		Password: Conf.Base.RedisPw,        // no password set
 		DB:       Conf.Base.RedisDefaultDB, // use default DB
 		PoolSize: Conf.Base.RedisPoolSize,
 	})
 	if pong, err := RedisCli.Ping().Result(); err != nil {
-		libs.ZapLogger.Error("RedisCli Ping Result pong:" + string(pong)+" err:" + err.Error())
+		libs.ZapLogger.Error("RedisCli Ping Result pong:"+string(pong)+" err:"+err.Error())
 	}
 
 	return

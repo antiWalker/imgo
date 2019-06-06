@@ -65,7 +65,7 @@ func EventUpload(eventBasic EventBasic, eventAttr map[string]string) bool {
 
 	strtime := strconv.FormatInt(eventBasic.EventTime, 10)
 	var signdata = encKey + strtime + strdata
-	signmd5 := md5V(signdata)
+	signmd5 := Md5V(signdata)
 	signbase64 := base64V(signmd5)
 
 	var update = Update{
@@ -118,7 +118,7 @@ func EventUpload(eventBasic EventBasic, eventAttr map[string]string) bool {
 	return true
 }
 
-func md5V(str string) string {
+func Md5V(str string) string {
 	h := md5.New()
 	h.Write([]byte(str))
 	return hex.EncodeToString(h.Sum(nil))

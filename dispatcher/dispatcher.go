@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,15 +23,23 @@ const (
 )
 
 var (
-	GoPool *ants.PoolWithFunc
+	SendMsgPool   *ants.PoolWithFunc
+	BatchSendPool *ants.PoolWithFunc
 )
 
-type Request struct {
+type SendMsgParam struct {
 	ToUid       string
 	Content     string
 	ToRole      string
 	Connections map[string]string
-	Result      chan string
+	Result      *msgHandled
+}
+
+type BatchSendParam struct {
+	ToUids  string
+	Content string
+	ToRole  string
+	Uuid    string
 }
 
 type httpReturn struct {
@@ -58,19 +67,22 @@ type msgHandled struct {
 func main() {
 	flag.Parse()
 
-	libs.InitLogger("../logs/dispatcher.log", "dispatcher")
 	defer libs.ZapLogger.Sync()
 
 	if err := InitConfig(); err != nil {
 		errstr := "Fatal error config file: " + err.Error()
 		libs.ZapLogger.Error(errstr)
 	}
+	libs.InitLogger(Conf.Base.Logfile, "dispatcher")
 	libs.ZapLogger.Sugar().Infof("conf :%v", Conf)
 
 	if Conf.Base.UsePool == 1 {
-		GoPool, _ = ants.NewPoolWithFunc(Conf.Base.PoolSize, PushMsg)
-		defer GoPool.Release()
+		SendMsgPool, _ = ants.NewPoolWithFunc(Conf.Base.PoolSize, PushMsg)
+		defer SendMsgPool.Release()
 	}
+
+	BatchSendPool, _ = ants.NewPoolWithFunc(Conf.Base.PoolSize, BatchSend)
+	defer BatchSendPool.Release()
 
 	// 设置cpu 核数
 	runtime.GOMAXPROCS(Conf.Base.MaxProc)
@@ -95,6 +107,7 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 	router.POST("/sendmsg", handleSendmsg)
+	router.POST("/batchsendmsg", handleBatchSendmsg)
 	router.POST("/checkstatus", handleCheckstatus)
 	s.ListenAndServe()
 
@@ -102,35 +115,152 @@ func main() {
 	//router层拿到php传过来的uid后，查询这个uid在哪个logic上。分别使用不同的rpcClient来发送数据。
 }
 
-func PushMsg(payload interface{}) {
-	request, ok := payload.(*Request)
+func BatchSend(payload interface{}) {
+	request, ok := payload.(*BatchSendParam)
 	if !ok {
-		libs.ZapLogger.Error("payload.(*Request) param not exist")
+		libs.ZapLogger.Error("payload.(*BatchSendParam) param not exist")
 		return
 	}
 
-	for uuid, v := range request.Connections {
+	arrayuids := strings.Split(request.ToUids, ",")
+	sendnum := 0
+	for _, touid := range arrayuids {
+		if len(touid) == 0 {
+			libs.ZapLogger.Error("len(touid) == 0")
+			continue
+		}
+
+		connections, err := GetUserPlace(touid)
+		if err != nil {
+			errstr := "redis connection break"
+			libs.ZapLogger.Error(errstr)
+			continue
+		}
+
+		var handled msgHandled
+		request := &SendMsgParam{ToUid: touid, Content: request.Content, ToRole: request.ToRole, Connections: connections, Result: &handled}
+		PushToWorker(request)
+		sendnum++
+	}
+
+	libs.ZapLogger.Info("BatchSend end uuid=" + request.Uuid, zap.Int("sendnum", sendnum))
+}
+
+func PushMsg(payload interface{}) {
+	request, ok := payload.(*SendMsgParam)
+	if !ok {
+		libs.ZapLogger.Error("payload.(*SendMsgParam) param not exist")
+		return
+	}
+
+	PushToWorker(request)
+}
+
+func PushToWorker(param *SendMsgParam) {
+	for uuid, v := range param.Connections {
 		if len(uuid) == 0 || len(v) == 0 {
 			libs.ZapLogger.Error("len(uuid) == 0 || len(v) == 0")
 			continue
 		}
-		serverid, err := strconv.Atoi(v[:1])
-		if err != nil {
-			libs.ZapLogger.Error("strconv.Atoi(v) err")
+
+		info, ret := GetSessionInfo(v)
+		if !ret {
+			libs.ZapLogger.Error("GetSessionInfo(v) err")
 			continue
 		}
-		RpcClient, ok := RpcClientList[int16(serverid)]
+
+		torole, _ := strconv.Atoi(param.ToRole)
+		if torole != info.Role {
+			continue
+		}
+		RpcClient, ok := RpcClientList[info.ServerId]
 		if !ok {
 			libs.ZapLogger.Error("RpcClientList[int16(serverid)] !ok")
 			continue
 		}
 
-		PushSingleToWorker(RpcClient, uuid, request.Content)
+		PushSingleToWorker(RpcClient, uuid, param.Content)
+		param.Result.Handled = 1
+		if info.Channel == CHANNEL_WEB {
+			param.Result.WEB += 1
+		} else if info.Channel == CHANNEL_IOS || info.Channel == CHANNEL_ANDROID {
+			param.Result.APP += 1
+		}
 	}
 }
 
+func handleBatchSendmsg(c *gin.Context) {
+	touids := c.PostForm("touids")
+	content := c.PostForm("content")
+	torole := c.PostForm("torole")
+	var ret httpReturn
+	var handled msgHandled
+	ret.Data = handled
+	if len(touids) == 0 {
+		errstr := "Param len(touids) == 0"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+	if len(content) == 0 {
+		errstr := "Param len(content) == 0"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+	if len(torole) == 0 {
+		errstr := "Param len(torole) == 0"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+
+	//检查一下redis连接是否断开
+	_, err := GetUserPlace("0")
+	if err != nil {
+		errstr := "redis connection break"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = REDIS_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+
+	if BatchSendPool == nil {
+		errstr := "BatchSendPool == nil"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = POOL_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
+
+	//异步执行批量请求，用md5生成一个uuid，用来追踪请求送达情况
+	nownano := time.Now().UnixNano()
+	strnano := strconv.FormatInt(nownano, 10)
+	uuid := libs.Md5V(strnano + touids)
+	request := &BatchSendParam{ToUids: touids, Content: content, ToRole: torole, Uuid: uuid}
+	if err := BatchSendPool.Invoke(request); err != nil {
+		libs.ZapLogger.Error(err.Error())
+		ret.Errno = POOL_ERROR
+		ret.Error = err.Error()
+		httpRet(c, ret)
+		return
+	}
+
+	libs.ZapLogger.Info("new BatchSendmsg ToUids=" + touids + " Content=" + content + " ToRole=" + torole + " Uuid=" + uuid)
+	handled.Handled = 1
+	ret.Data = handled
+	httpRet(c, ret)
+}
+
 func handleSendmsg(c *gin.Context) {
-	// 回复一个200OK,在client的http-get的resp的body中获取数据
 	touid := c.PostForm("touid")
 	content := c.PostForm("content")
 	torole := c.PostForm("torole")
@@ -175,24 +305,22 @@ func handleSendmsg(c *gin.Context) {
 		return
 	}
 
-	request := &Request{ToUid: touid, Content: content, ToRole: torole, Connections: connections}
-	if Conf.Base.UsePool == 1 && GoPool != nil {
-		if err := GoPool.Invoke(request); err != nil {
-			libs.ZapLogger.Error(err.Error())
-			c.JSON(http.StatusOK, gin.H{
-				"handled":  0,
-				"errorstr": err.Error(),
-			})
+	request := &SendMsgParam{ToUid: touid, Content: content, ToRole: torole, Connections: connections, Result: &handled}
+	if Conf.Base.UsePool == 1 && SendMsgPool != nil {
+		if err := SendMsgPool.Invoke(request); err != nil {
+			errstr := err.Error()
+			libs.ZapLogger.Error(errstr)
+			ret.Errno = POOL_ERROR
+			ret.Error = errstr
+			httpRet(c, ret)
 			return
 		}
 	} else {
 		PushMsg(request)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"handled":  1,
-		"errorstr": "",
-	})
+	ret.Data = handled
+	httpRet(c, ret)
 }
 
 func handleCheckstatus(c *gin.Context) {
@@ -220,21 +348,18 @@ func handleCheckstatus(c *gin.Context) {
 	}
 
 	for _, v := range connections {
-		lenv := len(v)
-		if lenv < 3 {
-			libs.ZapLogger.Error("lenv < 3 v=" + v)
+		info, ret := GetSessionInfo(v)
+		if !ret {
 			continue
 		}
-		role, _ := strconv.Atoi(v[lenv-1 : lenv])
-		channel, _ := strconv.Atoi(v[lenv-2 : lenv-1])
-		if role == ROLE_USER {
-			if channel == CHANNEL_WEB {
+		if info.Role == ROLE_USER {
+			if info.Channel == CHANNEL_WEB {
 				status.WebC = 1
 			} else {
 				status.AppC = 1
 			}
 		} else {
-			if channel == CHANNEL_WEB {
+			if info.Channel == CHANNEL_WEB {
 				status.WebB = 1
 			} else {
 				status.AppB = 1

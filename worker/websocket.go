@@ -30,7 +30,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 func InitWebsocket(bind string) (err error) {
 	//http.HandleFunc("/", serveHome)
 
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/ws/", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(DefaultServer, w, r)
 	})
 	err = http.ListenAndServe(bind, nil)

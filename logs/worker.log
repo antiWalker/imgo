@@ -1,0 +1,8 @@
+{"level":"info","time":"2019-06-05T15:30:47Z","line":"/Users/wang/go/src/imgo/libs/pprof.go:18","msg":"addr is 0.0.0.0:7777 error is listen tcp 0.0.0.0:7777: bind: address already in use","module":"worker"}
+{"level":"fatal","time":"2019-06-05T15:30:47Z","line":"/Users/wang/go/src/imgo/worker/main.go:42","msg":"listen tcp 0.0.0.0:8989: bind: address already in use","module":"worker"}
+{"level":"info","time":"2019-06-05T15:31:12Z","line":"/Users/wang/go/src/imgo/libs/pprof.go:18","msg":"addr is 0.0.0.0:7777 error is listen tcp 0.0.0.0:7777: bind: address already in use","module":"worker"}
+{"level":"fatal","time":"2019-06-05T15:31:12Z","line":"/Users/wang/go/src/imgo/worker/main.go:42","msg":"listen tcp 0.0.0.0:8989: bind: address already in use","module":"worker"}
+{"level":"info","time":"2019-06-05T15:34:31Z","line":"/Users/wang/go/src/imgo/libs/pprof.go:18","msg":"addr is 0.0.0.0:7777 error is listen tcp 0.0.0.0:7777: bind: address already in use","module":"worker"}
+{"level":"fatal","time":"2019-06-05T15:34:31Z","line":"/Users/wang/go/src/imgo/worker/main.go:42","msg":"listen tcp 0.0.0.0:8989: bind: address already in use","module":"worker"}
+{"level":"error","time":"2019-06-05T17:34:29Z","line":"/Users/wang/go/src/imgo/worker/redis.go:27","msg":"RedisCli Ping Result pong: err:dial tcp [::1]:6379: connect: connection refused","module":"worker"}
+{"level":"error","time":"2019-06-05T17:34:38Z","line":"/Users/wang/go/src/imgo/worker/rpc.go:48","msg":"Etcd has an error","module":"worker"}

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var host = flag.String("host", "172.18.32.78:8989", "server address")
+var host = flag.String("host", "wss.mafengwo.cn", "server address")
 var connections = flag.Int("conn", 1, "number of ws connections")
 func main() {
 	start()
@@ -18,7 +18,7 @@ func main() {
 func start() {
 	flag.Parse()
 
-	u := url.URL{Scheme: "ws", Host: *host, Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: *host, Path: "/ws/"}
 	log.Printf("connecting to %s", u.String())
 	var conns []*websocket.Conn
 	for i := 0; i < *connections; i++ {
@@ -32,8 +32,13 @@ func start() {
 			Name:  "f",
 			Value: "1",
 		}
+		cookie3 := &http.Cookie{
+			Name:  "r",
+			Value: "1",
+		}
 		req.AddCookie(cookie1)
 		req.AddCookie(cookie2)
+		req.AddCookie(cookie3)
 		conn, _, err := websocket.DefaultDialer.Dial(u.String(), req.Header)
 
 		if err != nil {

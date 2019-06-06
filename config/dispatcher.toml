@@ -1,11 +1,12 @@
 [base]
 pidfile = "/tmp/job.pid"
-hostAddr = "0.0.0.0:8080"      #http监听地址
-redisAddr = "127.0.0.1:6379"
-redisPw = "123456"
-usePool = 1                    #是否使用协程池处理http请求，1为使用，0为不使用
-poolSize = 100                 #协程池大小
-noDBStrategy = 0               #数据库连接断开时的策略，0为直接返回错误，1为轮询worker保证送达
+logfile = "../logs/dispatcher.log"
+hostAddr = "0.0.0.0:8080"         #http监听地址
+redisAddr = "192.168.3.162:6379"  #线上redis地址
+redisPw = ""
+usePool = 1                       #是否使用协程池处理http请求，1为使用，0为不使用
+poolSize = 100                    #协程池大小
+noDBStrategy = 0                  #数据库连接断开时的策略，0为直接返回错误，1为轮询worker保证送达
 
 [[workerAddrs]]
 key = 1
@@ -17,9 +18,9 @@ addr = "tcp@0.0.0.0:8849"
 
 [etcd]
 host = [
-       	"172.18.12.226:2379",
-       	"172.18.12.229:2379",
-       	"172.18.12.254:2379"
+       	"192.168.4.198:2379",
+       	"192.168.4.199:2379",
+       	"192.168.4.200:2379"
        ]
 basePath = "/imgo_rpcx"
 ServerPathDispatcher = "PushRpc"
