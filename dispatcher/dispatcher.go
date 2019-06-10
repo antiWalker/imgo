@@ -175,7 +175,7 @@ func PushToWorker(param *SendMsgParam) {
 		}
 		RpcClient, ok := RpcClientList[info.ServerId]
 		if !ok {
-			libs.ZapLogger.Error("RpcClientList[int16(serverid)] !ok")
+			libs.ZapLogger.Error("RpcClientList[int16(serverid)] !ok ServerId is "+string(info.ServerId))
 			continue
 		}
 

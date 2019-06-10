@@ -23,6 +23,7 @@ func InitRpcConnect() (err error) {
 	option := client.DefaultOption
 	option.GenBreaker = func() client.Breaker { return client.NewConsecCircuitBreaker(5, 30*time.Second) }
 	option.Retries = 10
+
 	for _, rpcConf := range d.GetServices() {
 		rpcConf.Value = strings.Replace(rpcConf.Value, "=&tps=0", "", 1)
 		serverId, error := strconv.ParseInt(rpcConf.Value, 10, 8)
@@ -31,7 +32,7 @@ func InitRpcConnect() (err error) {
 		}
 		d := client.NewPeer2PeerDiscovery(rpcConf.Key, "")
 		RpcClientList[int16(serverId)] = client.NewXClient(Conf.EtcdInfo.ServerPathDispatcher, client.Failtry, client.RandomSelect, d, option)
-	}
+		}
 	return
 }
 
