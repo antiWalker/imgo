@@ -31,6 +31,7 @@ type SendMsgParam struct {
 	ToUid       string
 	Content     string
 	ToRole      string
+	Product     string
 	Connections map[string]string
 	Result      *msgHandled
 }
@@ -143,7 +144,7 @@ func BatchSend(payload interface{}) {
 		sendnum++
 	}
 
-	libs.ZapLogger.Info("BatchSend end uuid=" + request.Uuid, zap.Int("sendnum", sendnum))
+	libs.ZapLogger.Info("BatchSend end uuid="+request.Uuid, zap.Int("sendnum", sendnum))
 }
 
 func PushMsg(payload interface{}) {
@@ -173,9 +174,13 @@ func PushToWorker(param *SendMsgParam) {
 		if torole != info.Role {
 			continue
 		}
+		product, _ := strconv.Atoi(param.Product)
+		if product != info.Product {
+			continue
+		}
 		RpcClient, ok := RpcClientList[info.ServerId]
 		if !ok {
-			libs.ZapLogger.Error("RpcClientList[int16(serverid)] !ok ServerId is "+string(info.ServerId))
+			libs.ZapLogger.Error("RpcClientList[int16(serverid)] !ok ServerId is " + string(info.ServerId))
 			continue
 		}
 
@@ -264,6 +269,7 @@ func handleSendmsg(c *gin.Context) {
 	touid := c.PostForm("touid")
 	content := c.PostForm("content")
 	torole := c.PostForm("torole")
+	product := c.PostForm("product")
 	var ret httpReturn
 	var handled msgHandled
 	ret.Data = handled
@@ -291,6 +297,14 @@ func handleSendmsg(c *gin.Context) {
 		httpRet(c, ret)
 		return
 	}
+	if len(product) == 0 {
+		errstr := "Param len(product) == 0"
+		libs.ZapLogger.Error(errstr)
+		ret.Errno = PARAM_ERROR
+		ret.Error = errstr
+		httpRet(c, ret)
+		return
+	}
 	connections, err := GetUserPlace(touid)
 	if err != nil && Conf.Base.NoDBStrategy == 0 {
 		errstr := "redis connection break"
@@ -305,7 +319,7 @@ func handleSendmsg(c *gin.Context) {
 		return
 	}
 
-	request := &SendMsgParam{ToUid: touid, Content: content, ToRole: torole, Connections: connections, Result: &handled}
+	request := &SendMsgParam{ToUid: touid, Content: content, ToRole: torole, Product: product, Connections: connections, Result: &handled}
 	if Conf.Base.UsePool == 1 && SendMsgPool != nil {
 		if err := SendMsgPool.Invoke(request); err != nil {
 			errstr := err.Error()
@@ -315,6 +329,7 @@ func handleSendmsg(c *gin.Context) {
 			httpRet(c, ret)
 			return
 		}
+		handled.Handled = 1
 	} else {
 		PushMsg(request)
 	}

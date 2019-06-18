@@ -40,7 +40,8 @@ func InitWebsocket(bind string) (err error) {
 // serveWs handles websocket requests from the peer.
 func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 	mfwUid, err := r.Cookie("mfw_uid")
-
+	ipPort := r.RemoteAddr
+	libs.ZapLogger.Info("ip is "+ipPort)
 	var cl *Client
 	if err == nil && mfwUid.Value !="" {
 
@@ -74,6 +75,27 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 			libs.ZapLogger.Info("have no role,so quit now")
 			return
 		}
+		productInfo, err := r.Cookie("p")
+		var product string
+		if err == nil && productInfo.Value !="" {
+			product = productInfo.Value
+		} else {
+			libs.ZapLogger.Info("have no product,so quit now")
+			return
+		}
+		// 黑名单机制开启
+		if Conf.Base.Blacklist == 1{
+			isMelanismIp := CheckUserMelanism(ipPort)
+			if isMelanismIp {
+				libs.ZapLogger.Info("the Melanism ip is "+ipPort)
+				return
+			}
+			isMelanismUid := CheckUserMelanism(mfwUid.Value)
+			if isMelanismUid {
+				libs.ZapLogger.Info("the Melanism uid is "+mfwUid.Value)
+				return
+			}
+		}
 		// 写入配置
 		cl = NewClient(server.BroadcastSize,server.SignalSize)
 		cl.conn = conn
@@ -85,7 +107,7 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 		store(cl.Uuid, cl)
 		libs.ZapLogger.Info("connNum is "+ strconv.Itoa(connNumber))
 		//hash insert to redis
-		SaveUserInfo(cl.Uid, cl.Uuid,platform,role)
+		SaveUserInfo(cl.Uid, cl.Uuid,platform,role,product)
 	} else {
 		libs.ZapLogger.Info("have no mfw_uid,so quit now")
 		return

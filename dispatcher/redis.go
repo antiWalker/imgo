@@ -4,7 +4,10 @@ import (
 	"github.com/go-redis/redis"
 	"imgo/libs"
 	"strconv"
+	"strings"
 )
+
+const REDIS_FIELD_LEN_MIN int = 5 //Redis中标识用户连接的field的最短长度
 
 type redisClusterConf struct {
 	Host string `json:"host"`
@@ -12,9 +15,10 @@ type redisClusterConf struct {
 }
 
 type SessionInfo struct {
-	ServerId int16
-	Channel  int
-	Role     int
+	ServerId int16 //RPC服务器id
+	Channel  int   //渠道号
+	Role     int   //用户角色
+	Product  int   //业务线
 }
 
 var (
@@ -66,16 +70,21 @@ func GetUserPlace(uid string) (map[string]string, error) {
 
 func GetSessionInfo(v string) (SessionInfo, bool) {
 	var info SessionInfo
-	lenv := len(v)
-	if lenv < 3 {
-		libs.ZapLogger.Error("lenv < 3 v=" + v)
+	len := len(v)
+	if len < REDIS_FIELD_LEN_MIN {
+		libs.ZapLogger.Error("lenv < 5 v=" + v)
 		return info, false
 	}
-	role, _ := strconv.Atoi(v[lenv-1 : lenv])
-	channel, _ := strconv.Atoi(v[lenv-2 : lenv-1])
-	serverid, _ := strconv.Atoi(v[:lenv-2])
-	info.Role = role
-	info.Channel = channel
+	index := strings.LastIndex(v, "_")
+	if index == -1 {
+		libs.ZapLogger.Error("index == -1 v=" + v)
+		return info, false
+	}
+
+	info.Product, _ = strconv.Atoi(v[index+1 : len])
+	info.Role, _ = strconv.Atoi(v[index-1 : index])
+	info.Channel, _ = strconv.Atoi(v[index-2 : index-1])
+	serverid, _ := strconv.Atoi(v[:index-2])
 	info.ServerId = int16(serverid)
 
 	return info, true

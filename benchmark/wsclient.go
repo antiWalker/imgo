@@ -4,8 +4,10 @@ import (
 	"flag"
 	"github.com/gorilla/websocket"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -21,12 +23,19 @@ func start() {
 	u := url.URL{Scheme: "ws", Host: *host, Path: "/ws/"}
 	log.Printf("connecting to %s", u.String())
 	var conns []*websocket.Conn
+	rand.New(rand.NewSource(10))
 	for i := 0; i < *connections; i++ {
 		req, err := http.NewRequest("GET", "http://"+*host, nil)
-
+		var uid string
+		uid = strconv.Itoa(rand.Int())
+		//strconv.Itoa(n)
 		cookie1 := &http.Cookie{
 			Name:  "mfw_uid",
-			Value: "489898",
+			Value:	uid,
+		}
+		cookie1 = &http.Cookie{
+			Name:  "mfw_uid",
+			Value:	"345678",
 		}
 		cookie2 := &http.Cookie{
 			Name:  "f",
@@ -36,9 +45,14 @@ func start() {
 			Name:  "r",
 			Value: "1",
 		}
+		cookie4 := &http.Cookie{
+			Name:  "p",
+			Value: "1",
+		}
 		req.AddCookie(cookie1)
 		req.AddCookie(cookie2)
 		req.AddCookie(cookie3)
+		req.AddCookie(cookie4)
 		conn, _, err := websocket.DefaultDialer.Dial(u.String(), req.Header)
 
 		if err != nil {

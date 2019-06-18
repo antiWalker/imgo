@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/go-redis/redis"
 	"imgo/libs"
+	"strings"
 	"time"
 )
 
@@ -31,18 +32,46 @@ func InitRedis() (err error) {
 }
 
 //将用户和服务器IP的对应关系保存到redis
-func SaveUserInfo(key string, uuid string,platform string,role string) (err error) {
+func SaveUserInfo(key string, uuid string,platform string,role string,product string) (err error) {
 	if RedisCli == nil {
 		libs.ZapLogger.Error("RedisCli == nil")
 		return err
 	}
 	//RedisCli.HSet(libs.REDIS_PREFIX+key, uuid, Conf.Base.RpcInnerIp+":"+Conf.Base.RpcInnerPort)
-	saveValue := Conf.Base.ServerId + platform + role
+	saveValue := Conf.Base.ServerId + platform + role + "_"+ product
 	RedisCli.HSet(libs.REDIS_PREFIX+key, uuid, saveValue)
 	RedisCli.Expire(libs.REDIS_PREFIX+key, time.Second * time.Duration(Conf.Base.RedisKeyTtl))//2个小时
 	return
 }
+//在这里要做逻辑判断，一分钟内同一个ip下的客户端建立连接次数超过60，则直接砍断类似的连接。建立黑名单机制。
+func CheckUserMelanism(data string)(isMelanism bool){
+	spliceData := strings.Split(data, ":")
+	var key string
+	var limit int
+	if len(spliceData) == 2 {
+		key = "imgoip_"+spliceData[0]
+		limit = Conf.Base.BlackipNumber
+	}else {
+		key = "imgouid_"+spliceData[0]
+		limit = Conf.Base.BlackuidNumber
+	}
 
+	n, _ := RedisCli.Exists(key).Result()
+	if n != 0 {
+		result, _ := RedisCli.Get(key).Int64()
+		if result>=int64(limit) {
+			//超过60次 这个ip or uid 被封禁1分钟
+			RedisCli.Expire(key, 60*time.Second)
+			isMelanism = true
+		}else{
+			RedisCli.Incr(key)
+		}
+	}else{
+		RedisCli.Incr(key)
+		RedisCli.Expire(key, 60*time.Second)
+	}
+	return isMelanism
+}
 //续租客户端状态
 func UpdateUserExpire(key string) (err error) {
 	if RedisCli == nil {

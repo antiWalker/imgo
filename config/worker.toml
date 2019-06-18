@@ -8,6 +8,9 @@ redisPw = ""
 RedisDefaultDB = 0
 RedisPoolSize = 200
 RedisKeyTtl = 7200
+Blacklist = 1
+BlackipNumber = 120
+BlackuidNumber = 60
 
 [websocket]
 bind = "0.0.0.0:8989"
@@ -16,7 +19,7 @@ retransInterval = 18
 
 [[rpcPushAddrs]]
 key = 1
-addr = "tcp@172.18.25.98:8848"
+addr = "tcp@0.0.0.0:8848"
 inner = "127.0.0.1:8848"
 
 [etcd]

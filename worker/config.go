@@ -62,6 +62,9 @@ type BaseConf struct {
 	RedisDefaultDB  int    `mapstructure:"redisDefaultDB"`
 	RedisPoolSize   int
 	RedisKeyTtl     int
+	Blacklist		int
+	BlackipNumber	int
+	BlackuidNumber	int
 }
 
 func InitConfig() (err error) {
