@@ -15,7 +15,7 @@ func MyTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 	enc.AppendString(t.Format("2006-01-02T15:04:05Z"))
 }
 
-func InitLogger(LogFileName string, ModuleName string) {
+func InitLogger(LogFileName string, ModuleName string,logLevel int) {
 	hook := lumberjack.Logger{
 		Filename:   LogFileName, // 日志文件路径
 		MaxSize:    1024,        // 每个日志文件保存的最大尺寸 单位：M
@@ -41,7 +41,12 @@ func InitLogger(LogFileName string, ModuleName string) {
 
 	// 设置日志级别
 	atomicLevel := zap.NewAtomicLevel()
-	atomicLevel.SetLevel(zap.InfoLevel)
+	switch logLevel {
+	case 0:
+		atomicLevel.SetLevel(zap.InfoLevel)
+	case 2:
+		atomicLevel.SetLevel(zap.ErrorLevel)
+	}
 
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderConfig),                                           // 编码器配置

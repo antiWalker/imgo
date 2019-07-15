@@ -32,27 +32,29 @@ func InitRedis() (err error) {
 }
 
 //将用户和服务器IP的对应关系保存到redis
-func SaveUserInfo(key string, uuid string,platform string,role string,product string) (err error) {
+func SaveUserInfo(key string, uuid string,platform string,role string) (err error) {
 	if RedisCli == nil {
 		libs.ZapLogger.Error("RedisCli == nil")
 		return err
 	}
 	//RedisCli.HSet(libs.REDIS_PREFIX+key, uuid, Conf.Base.RpcInnerIp+":"+Conf.Base.RpcInnerPort)
-	saveValue := Conf.Base.ServerId + platform + role + "_"+ product
+	saveValue := Conf.Base.ServerId + platform + role
 	RedisCli.HSet(libs.REDIS_PREFIX+key, uuid, saveValue)
 	RedisCli.Expire(libs.REDIS_PREFIX+key, time.Second * time.Duration(Conf.Base.RedisKeyTtl))//2个小时
 	return
 }
 //在这里要做逻辑判断，一分钟内同一个ip下的客户端建立连接次数超过60，则直接砍断类似的连接。建立黑名单机制。
 func CheckUserMelanism(data string)(isMelanism bool){
-	spliceData := strings.Split(data, ":")
+	if data ==""{
+		return false
+	}
 	var key string
 	var limit int
-	if len(spliceData) == 2 {
-		key = "imgoip_"+spliceData[0]
+	if i := strings.Index(data, "."); i >= 0 {
+		key = "imgoip_"+data
 		limit = Conf.Base.BlackipNumber
-	}else {
-		key = "imgouid_"+spliceData[0]
+	}else{
+		key = "imgouid_"+data
 		limit = Conf.Base.BlackuidNumber
 	}
 

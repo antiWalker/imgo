@@ -41,6 +41,7 @@ type BatchSendParam struct {
 	Content string
 	ToRole  string
 	Uuid    string
+	Product string
 }
 
 type httpReturn struct {
@@ -74,7 +75,7 @@ func main() {
 		errstr := "Fatal error config file: " + err.Error()
 		libs.ZapLogger.Error(errstr)
 	}
-	libs.InitLogger(Conf.Base.Logfile, "dispatcher")
+	libs.InitLogger(Conf.Base.Logfile, "dispatcher",Conf.Base.LogLevel)
 	libs.ZapLogger.Sugar().Infof("conf :%v", Conf)
 
 	if Conf.Base.UsePool == 1 {
@@ -174,10 +175,6 @@ func PushToWorker(param *SendMsgParam) {
 		if torole != info.Role {
 			continue
 		}
-		product, _ := strconv.Atoi(param.Product)
-		if product != info.Product {
-			continue
-		}
 		RpcClient, ok := RpcClientList[info.ServerId]
 		if !ok {
 			libs.ZapLogger.Error("RpcClientList[int16(serverid)] !ok ServerId is " + string(info.ServerId))
@@ -198,6 +195,7 @@ func handleBatchSendmsg(c *gin.Context) {
 	touids := c.PostForm("touids")
 	content := c.PostForm("content")
 	torole := c.PostForm("torole")
+	//product := c.PostForm("product")
 	var ret httpReturn
 	var handled msgHandled
 	ret.Data = handled
@@ -269,7 +267,7 @@ func handleSendmsg(c *gin.Context) {
 	touid := c.PostForm("touid")
 	content := c.PostForm("content")
 	torole := c.PostForm("torole")
-	product := c.PostForm("product")
+	//product := c.PostForm("product")
 	var ret httpReturn
 	var handled msgHandled
 	ret.Data = handled
@@ -297,14 +295,6 @@ func handleSendmsg(c *gin.Context) {
 		httpRet(c, ret)
 		return
 	}
-	if len(product) == 0 {
-		errstr := "Param len(product) == 0"
-		libs.ZapLogger.Error(errstr)
-		ret.Errno = PARAM_ERROR
-		ret.Error = errstr
-		httpRet(c, ret)
-		return
-	}
 	connections, err := GetUserPlace(touid)
 	if err != nil && Conf.Base.NoDBStrategy == 0 {
 		errstr := "redis connection break"
@@ -319,7 +309,7 @@ func handleSendmsg(c *gin.Context) {
 		return
 	}
 
-	request := &SendMsgParam{ToUid: touid, Content: content, ToRole: torole, Product: product, Connections: connections, Result: &handled}
+	request := &SendMsgParam{ToUid: touid, Content: content, ToRole: torole, Connections: connections, Result: &handled}
 	if Conf.Base.UsePool == 1 && SendMsgPool != nil {
 		if err := SendMsgPool.Invoke(request); err != nil {
 			errstr := err.Error()

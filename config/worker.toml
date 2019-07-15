@@ -1,10 +1,12 @@
 [base]
 pidfile = "/tmp/worker.pid"
 logfile = "../logs/worker.log"
+logLevel = 0
 serverId = "1"
 PprofBind = "0.0.0.0:7777"
 RedisAddr = "127.0.0.1:6379"
 redisPw = ""
+maxMessageSize = 7012
 RedisDefaultDB = 0
 RedisPoolSize = 200
 RedisKeyTtl = 7200

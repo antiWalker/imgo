@@ -31,6 +31,7 @@ type Etcd struct {
 type BaseConf struct {
 	Pidfile        string `mapstructure:"pidfile"`
 	Logfile        string   `mapstructure:"logfile"`   // log 文件
+	LogLevel	   int		`mapstructure:"logLevel"`
 	MaxProc        int
 	PprofAddrs     []string `mapstructure:"pprofBind"` //
 	HostAddr       string   `mapstructure:"hostAddr"`  //

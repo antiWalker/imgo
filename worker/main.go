@@ -13,7 +13,7 @@ func main() {
 		return
 	}
 
-	libs.InitLogger(Conf.Base.Logfile, "worker")
+	libs.InitLogger(Conf.Base.Logfile, "worker",Conf.Base.LogLevel)
 	// 设置cpu 核数
 	//runtime.GOMAXPROCS(Conf.Base.MaxProc)
 	// 加入性能监控

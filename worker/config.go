@@ -49,10 +49,11 @@ type BaseConf struct {
 	MaxProc         int
 	PprofBind       []string `mapstructure:"pprofBind"` // 性能监控的域名端口
 	Logfile         string   `mapstructure:"logfile"`   // log 文件
+	LogLevel		int      `mapstructure:"logLevel"`
 	WriteWait       time.Duration
 	PongWait        time.Duration
 	PingPeriod      time.Duration
-	MaxMessageSize  int64
+	MaxMessageSize  int64	 `mapstructure:"maxMessageSize"`
 	BroadcastSize   int
 	SignalSize		int
 	ReadBufferSize  int

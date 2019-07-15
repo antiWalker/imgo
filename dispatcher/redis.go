@@ -4,10 +4,9 @@ import (
 	"github.com/go-redis/redis"
 	"imgo/libs"
 	"strconv"
-	"strings"
 )
 
-const REDIS_FIELD_LEN_MIN int = 5 //Redis中标识用户连接的field的最短长度
+const REDIS_FIELD_LEN_MIN int = 3 //Redis中标识用户连接的field的最短长度
 
 type redisClusterConf struct {
 	Host string `json:"host"`
@@ -72,19 +71,13 @@ func GetSessionInfo(v string) (SessionInfo, bool) {
 	var info SessionInfo
 	len := len(v)
 	if len < REDIS_FIELD_LEN_MIN {
-		libs.ZapLogger.Error("lenv < 5 v=" + v)
-		return info, false
-	}
-	index := strings.LastIndex(v, "_")
-	if index == -1 {
-		libs.ZapLogger.Error("index == -1 v=" + v)
+		libs.ZapLogger.Error("lenv < 3 v=" + v)
 		return info, false
 	}
 
-	info.Product, _ = strconv.Atoi(v[index+1 : len])
-	info.Role, _ = strconv.Atoi(v[index-1 : index])
-	info.Channel, _ = strconv.Atoi(v[index-2 : index-1])
-	serverid, _ := strconv.Atoi(v[:index-2])
+	info.Role, _ = strconv.Atoi(v[len-1 : len])
+	info.Channel, _ = strconv.Atoi(v[len-2 : len-1])
+	serverid, _ := strconv.Atoi(v[:len-2])
 	info.ServerId = int16(serverid)
 
 	return info, true

@@ -1,6 +1,7 @@
 [base]
 pidfile = "/tmp/job.pid"
 logfile = "../logs/dispatcher.log"
+logLevel = 2
 hostAddr = "0.0.0.0:8080"         #http监听地址
 redisAddr = "127.0.0.1:6379"  #线上redis地址
 redisPw = ""

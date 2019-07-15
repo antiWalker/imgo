@@ -6,6 +6,7 @@ import (
 	"imgo/libs"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -40,7 +41,22 @@ func InitWebsocket(bind string) (err error) {
 // serveWs handles websocket requests from the peer.
 func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 	mfwUid, err := r.Cookie("mfw_uid")
-	ipPort := r.RemoteAddr
+	//ipPort := r.RemoteAddr
+	ipPort := r.Header.Get("X-Real-IP")
+	if ipPort[:5] == "10.3."{
+		ipInfo :=r.Header.Get("X-Forwarded-For")
+		XForwardedFor :=strings.Split(ipInfo,",")
+		ipPort = XForwardedFor[0]
+		/*
+		libs.ZapLogger.Info("-----1---")
+		ipPort5 := r.Header
+		for k := range ipPort5 {
+			value := r.Header.Get(k)
+			libs.ZapLogger.Info("key==>"+k+" value==>"+value)
+		}
+		libs.ZapLogger.Info("-----2---")
+		*/
+	}
 	libs.ZapLogger.Info("ip is "+ipPort)
 	var cl *Client
 	if err == nil && mfwUid.Value !="" {
@@ -63,7 +79,7 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 		if err == nil && from.Value !="" {
 			platform = from.Value
 		} else {
-			libs.ZapLogger.Info("have no from,so quit now")
+			libs.ZapLogger.Error("have no from,so quit now")
 			return
 		}
 		//role just
@@ -72,9 +88,10 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 		if err == nil && roleInfo.Value !="" {
 			role = roleInfo.Value
 		} else {
-			libs.ZapLogger.Info("have no role,so quit now")
+			libs.ZapLogger.Error("have no role,so quit now")
 			return
 		}
+		/*
 		productInfo, err := r.Cookie("p")
 		var product string
 		if err == nil && productInfo.Value !="" {
@@ -83,16 +100,17 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 			libs.ZapLogger.Info("have no product,so quit now")
 			return
 		}
+		*/
 		// 黑名单机制开启
 		if Conf.Base.Blacklist == 1{
 			isMelanismIp := CheckUserMelanism(ipPort)
 			if isMelanismIp {
-				libs.ZapLogger.Info("the Melanism ip is "+ipPort)
+				libs.ZapLogger.Error("the Melanism ip is "+ipPort)
 				return
 			}
 			isMelanismUid := CheckUserMelanism(mfwUid.Value)
 			if isMelanismUid {
-				libs.ZapLogger.Info("the Melanism uid is "+mfwUid.Value)
+				libs.ZapLogger.Error("the Melanism uid is "+mfwUid.Value)
 				return
 			}
 		}
@@ -107,7 +125,7 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 		store(cl.Uuid, cl)
 		libs.ZapLogger.Info("connNum is "+ strconv.Itoa(connNumber))
 		//hash insert to redis
-		SaveUserInfo(cl.Uid, cl.Uuid,platform,role,product)
+		SaveUserInfo(cl.Uid, cl.Uuid,platform,role)
 	} else {
 		libs.ZapLogger.Info("have no mfw_uid,so quit now")
 		return
@@ -181,8 +199,11 @@ func (s *Server) readPump(cl *Client) {
 
 func (s *Server) writePump(cl *Client) {
 	defer func() {
-		libs.ZapLogger.Info("quit writePump")
-		//cl.Release()
+		if err := recover(); err != nil {
+			libs.ZapLogger.Error(err.(string))
+			libs.ZapLogger.Info("quit writePump")
+			cl.Release()
+		}
 	}()
 	for {
 		select {
