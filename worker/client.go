@@ -75,10 +75,13 @@ func (cl *Client) HeartBeat() {
 			libs.ZapLogger.Info("err is redis may be down")
 		}
 	}()
-
+	BeatDuration := time.Second * time.Duration(Conf.Websocket.BeatingInterval)
+	BeatDelay := time.NewTimer(BeatDuration)
+	defer BeatDelay.Stop()
 	for {
+		BeatDelay.Reset(BeatDuration)
 		select {
-		case <-time.After(time.Second * time.Duration(Conf.Websocket.BeatingInterval)):
+		case <-BeatDelay.C://time.After(time.Second * time.Duration(Conf.Websocket.BeatingInterval)):
 			libs.ZapLogger.Info("in BeatingInterval s,the heartAck is not received,so release it")
 			cl.Release()
 			return
@@ -106,9 +109,13 @@ func (cl *Client) Retransmission(msg string) {
 		}
 	}()
 	var retranNumber = 0
+	RetranDuration := time.Second * time.Duration(Conf.Websocket.RetransInterval)
+	RetranDelay := time.NewTimer(RetranDuration)
+	defer RetranDelay.Stop()
 	for {
+		RetranDelay.Reset(RetranDuration)
 		select {
-		case <-time.After(time.Second * time.Duration(Conf.Websocket.RetransInterval)):
+		case <-RetranDelay.C://time.After(time.Second * time.Duration(Conf.Websocket.RetransInterval)):
 			if retranNumber < 3 {
 				libs.ZapLogger.Info("the AckFrame is not received,so retransmission")
 				cl.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))

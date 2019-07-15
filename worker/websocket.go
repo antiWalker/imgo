@@ -43,7 +43,7 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 	mfwUid, err := r.Cookie("mfw_uid")
 	//ipPort := r.RemoteAddr
 	ipPort := r.Header.Get("X-Real-IP")
-	if ipPort[:5] == "10.3."{
+	if ipPort!="" && ipPort[:5] == "10.3."{
 		ipInfo :=r.Header.Get("X-Forwarded-For")
 		XForwardedFor :=strings.Split(ipInfo,",")
 		ipPort = XForwardedFor[0]
@@ -62,24 +62,12 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 	if err == nil && mfwUid.Value !="" {
 
 		libs.ZapLogger.Info(mfwUid.Value+" login")
-		var upgrader = websocket.Upgrader{
-			ReadBufferSize:  DefaultServer.ReadBufferSize,
-			WriteBufferSize: DefaultServer.WriteBufferSize,
-		}
-		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-
-		conn, err := upgrader.Upgrade(w, r, nil)
-
-		if err != nil {
-			libs.ZapLogger.Error(err.Error())
-			return
-		}
 		from, err := r.Cookie("f")
 		var platform string
 		if err == nil && from.Value !="" {
 			platform = from.Value
 		} else {
-			libs.ZapLogger.Error("have no from,so quit now")
+			libs.ZapLogger.Info("have no from,so quit now")
 			return
 		}
 		//role just
@@ -88,7 +76,7 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 		if err == nil && roleInfo.Value !="" {
 			role = roleInfo.Value
 		} else {
-			libs.ZapLogger.Error("have no role,so quit now")
+			libs.ZapLogger.Info("have no role,so quit now")
 			return
 		}
 		/*
@@ -114,6 +102,19 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		//升级
+		var upgrader = websocket.Upgrader{
+			ReadBufferSize:  DefaultServer.ReadBufferSize,
+			WriteBufferSize: DefaultServer.WriteBufferSize,
+		}
+		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+
+		conn, err := upgrader.Upgrade(w, r, nil)
+
+		if err != nil {
+			libs.ZapLogger.Error(err.Error())
+			return
+		}
 		// 写入配置
 		cl = NewClient(server.BroadcastSize,server.SignalSize)
 		cl.conn = conn
@@ -123,7 +124,7 @@ func serveWs(server *Server, w http.ResponseWriter, r *http.Request) {
 		cl.Uuid = strconv.FormatInt(cl.Time, 10) + cl.Uid
 
 		store(cl.Uuid, cl)
-		libs.ZapLogger.Info("connNum is "+ strconv.Itoa(connNumber))
+		libs.ZapLogger.Error("connNum is "+ strconv.Itoa(connNumber))
 		//hash insert to redis
 		SaveUserInfo(cl.Uid, cl.Uuid,platform,role)
 	} else {

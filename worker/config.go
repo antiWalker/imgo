@@ -98,7 +98,7 @@ func NewConfig() *Config {
 			MaxMessageSize:  512,
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
-			BroadcastSize:   256,
+			BroadcastSize:   1024,
 			SignalSize:		 10,
 		},
 		Websocket: WebsocketConf{
